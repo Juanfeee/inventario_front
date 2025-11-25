@@ -65,21 +65,57 @@ const Products: React.FC = () => {
       return;
     }
 
-    console.log("🗑️ Intentando eliminar producto ID:", productId);
+    console.log("🗑️ [FRONTEND] Intentando eliminar producto ID:", productId);
 
-    const result = await callApi("delete", `/products/${productId}`, null, {
-      onSuccess: () => {
-        console.log("✅ Producto eliminado exitosamente");
+    try {
+      // Obtener el token del localStorage
+      const token = localStorage.getItem("token");
+      console.log("🔐 Token encontrado:", token ? "Sí" : "No");
+
+      if (!token) {
+        alert("No estás autenticado. Por favor inicia sesión nuevamente.");
+        // Opcional: redirigir al login
+        // navigate('/login');
+        return;
+      }
+
+      const response = await fetch(
+        `http://localhost:5000/api/products/${productId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`, // ← AGREGAR ESTA LÍNEA
+          },
+        }
+      );
+
+      console.log("📊 [FRONTEND] Status de respuesta:", response.status);
+
+      const result = await response.json();
+      console.log("📦 [FRONTEND] Respuesta del servidor:", result);
+
+      if (response.ok && result.success) {
+        console.log("✅ [FRONTEND] Producto eliminado exitosamente");
         loadProducts();
         alert("Producto eliminado exitosamente");
-      },
-      onError: (errorMsg) => {
-        console.error("❌ Error eliminando producto:", errorMsg);
-        alert(`Error al eliminar producto: ${errorMsg}`);
-      },
-    });
+      } else {
+        console.error("❌ [FRONTEND] Error del servidor:", result.error);
 
-    console.log("📦 Resultado de delete:", result);
+        // Si el token expiró
+        if (response.status === 401) {
+          alert("Tu sesión ha expirado. Por favor inicia sesión nuevamente.");
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          // navigate('/login');
+        } else {
+          alert(`Error: ${result.error || "Error al eliminar producto"}`);
+        }
+      }
+    } catch (error: any) {
+      console.error("💥 [FRONTEND] Error de conexión:", error);
+      alert("Error de conexión al eliminar producto");
+    }
   };
 
   const handleSubmit = (formData: ProductFormData) => {

@@ -1,3 +1,4 @@
+// useApi.ts - VERSIÓN CORREGIDA
 import { useState, useCallback } from "react";
 import api from "../services/api";
 import type { ApiResponse } from "../types";
@@ -33,8 +34,12 @@ export const useApi = () => {
         const result: ApiResponse<T> = response.data;
         console.log('✅ Respuesta del servidor:', result);
 
+        // CORRECCIÓN: Pasar result.data si existe, sino pasar result completo
+        const successData = (result as any).data !== undefined ? (result as any).data : result;
+        
         if (result.success && options?.onSuccess) {
-          options.onSuccess(result.data); 
+          console.log('📤 Ejecutando onSuccess con:', successData);
+          options.onSuccess(successData);
         }
 
         if (!result.success && options?.onError) {
@@ -45,7 +50,6 @@ export const useApi = () => {
       } catch (err: any) {
         console.error('❌ Error completo:', err);
         
-        // Mejor manejo de errores
         const errorMessage = err.response?.data?.error || 
                            err.response?.data?.message || 
                            err.message || 
@@ -65,14 +69,5 @@ export const useApi = () => {
     []
   );
 
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
-
-  return {
-    loading,
-    error,
-    callApi,
-    clearError,
-  };
+  return { loading, error, callApi, clearError: () => setError(null) };
 };
